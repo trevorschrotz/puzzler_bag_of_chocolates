@@ -1,0 +1,145 @@
+---
+title: "Riddler Classic - Chocolates"
+output: html_notebook
+---
+
+From mathematician (and author of Basic Probability: What Every Math Student Should Know) Henk Tijms comes a choice matter of chance and chocolate:
+
+I have 10 chocolates in a bag: Two are milk chocolate, while the other eight are dark chocolate. One at a time, I randomly pull chocolates from the bag and eat them — that is, until I pick a chocolate of the other kind. When I get to the other type of chocolate, I put it back in the bag and start drawing again with the remaining chocolates. I keep going until I have eaten all 10 chocolates.
+
+For example, if I first pull out a dark chocolate, I will eat it. (I’ll always eat the first chocolate I pull out.) If I pull out a second dark chocolate, I will eat that as well. If the third one is milk chocolate, I will not eat it (yet), and instead place it back in the bag. Then I will start again, eating the first chocolate I pull out.
+
+What are the chances that the last chocolate I eat is milk chocolate?
+
+```{r}
+library(tidyverse)
+library(purrr)
+```
+
+
+```{r}
+#Initial Settings
+milk <- 2
+dark <- 8
+milk_prob <- milk/(milk+dark)
+dark_prob <- dark/(milk+dark)
+start_again <- TRUE
+previous_draw <- ""
+last_item <- "NA"
+
+chocolate_fun <- function(milk, dark, milk_prob, dark_prob, start_again, previous_draw, last_item) {
+  while(last_item == "NA")
+    {
+      while(start_again)
+        {
+          #Dealing with the first draw
+          first_draw <- sample(x = c("milk","dark"), size = 1, prob = c(milk_prob, dark_prob))
+          milk <- case_when(first_draw == "milk" ~ milk - 1,
+                            TRUE ~ milk - 0)
+          dark <- case_when(first_draw == "dark" ~ dark - 1,
+                            TRUE ~ dark - 0)
+          milk_prob <- milk/(milk+dark)
+          dark_prob <- dark/(milk+dark)
+          previous_draw <- first_draw
+          start_again <- FALSE
+        }
+        #Dealing with subsequent draws
+        next_draw <- sample(x = c("milk","dark"), size = 1, prob = c(milk_prob, dark_prob))
+        milk <- case_when(next_draw == previous_draw & previous_draw == "milk" ~ milk - 1, TRUE ~ milk + 0)
+        dark <- case_when(next_draw == previous_draw & previous_draw == "dark" ~ dark - 1, TRUE ~ dark + 0)
+        milk_prob <- milk/(milk+dark)
+        dark_prob <- dark/(milk+dark)
+        start_again <- next_draw != first_draw
+        previous_draw <- case_when(start_again == TRUE ~ "", TRUE ~ next_draw)
+        last_item <- case_when(dark + milk == 1 & dark > 0 ~ "dark", 
+                               dark + milk == 1 & milk > 0 ~ "milk",
+                               dark == 0 ~ "milk",
+                               milk == 0 ~ "dark",
+                               TRUE ~ "NA")
+  }
+  return(last_item)
+}
+
+set.seed(1975)
+outcomes <- replicate(1000, chocolate_fun(milk, dark, milk_prob, dark_prob, start_again, previous_draw, last_item))
+```
+
+
+```{r}
+#summarize outcomes from trial 2
+
+outcomes %>% 
+  as_tibble() %>% 
+  mutate(milk_outcome = case_when(value == "milk" ~ 1, TRUE ~ 0)) %>% 
+  summarize(milk_outcome = sum(milk_outcome)/n())
+
+outcomes %>% 
+  as_tibble() %>% 
+  group_by(value) %>% 
+  count()
+```
+
+
+```{r}
+#same concept as above without a function and using a for loop to build a vector of outcomes
+for (i in 1:1000) {
+  
+milk <- 2
+dark <- 8
+milk_prob <- milk/(milk+dark)
+dark_prob <- dark/(milk+dark)
+start_again <- TRUE
+previous_draw <- ""
+last_item <- "NA"
+
+  while(last_item == "NA")
+    {
+      while(start_again)
+        {
+          #Dealing with the first draw
+          first_draw <- sample(x = c("milk","dark"), size = 1, prob = c(milk_prob, dark_prob))
+          milk <- case_when(first_draw == "milk" ~ milk - 1,
+                            TRUE ~ milk - 0)
+          dark <- case_when(first_draw == "dark" ~ dark - 1,
+                            TRUE ~ dark - 0)
+          milk_prob <- milk/(milk+dark)
+          dark_prob <- dark/(milk+dark)
+          previous_draw <- first_draw
+          start_again <- FALSE
+        }
+        #Dealing with subsequent draws
+        next_draw <- sample(x = c("milk","dark"), size = 1, prob = c(milk_prob, dark_prob))
+        milk <- case_when(next_draw == previous_draw & previous_draw == "milk" ~ milk - 1, TRUE ~ milk + 0)
+        dark <- case_when(next_draw == previous_draw & previous_draw == "dark" ~ dark - 1, TRUE ~ dark + 0)
+        milk_prob <- milk/(milk+dark)
+        dark_prob <- dark/(milk+dark)
+        start_again <- next_draw != first_draw
+        previous_draw <- case_when(start_again == TRUE ~ "", TRUE ~ next_draw)
+        last_item <- case_when(dark + milk == 1 & dark > 0 ~ "dark", 
+                               dark + milk == 1 & milk > 0 ~ "milk",
+                               dark == 0 ~ "milk",
+                               milk == 0 ~ "dark",
+                               TRUE ~ "NA")
+  }
+    ov <- append(last_item, ov)
+    i <- i + 1
+}
+```
+
+
+```{r}
+#summarize outcomes from trial 2
+ov %>% 
+  as_tibble() %>% 
+  mutate(milk_outcome = case_when(value == "milk" ~ 1, TRUE ~ 0)) %>% 
+  summarize(milk_outcome = sum(milk_outcome)/n())
+
+ov %>% 
+  as_tibble() %>% 
+  group_by(value) %>% 
+  count()
+```
+
+
+
+
